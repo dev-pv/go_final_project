@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"todo-app/internal/db"
 )
 
 func main() {
@@ -11,6 +13,11 @@ func main() {
 
 	if envPort := os.Getenv("TODO_PORT"); envPort != "" {
 		port = envPort
+	}
+
+	_, err := db.InitDB()
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
 	webDir := "./web"
