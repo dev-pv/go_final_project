@@ -9,9 +9,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// InitDB initializes the database and creates required tables.
 func InitDB() (*sql.DB, error) {
-	// Determine database file path
 	appPath, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
@@ -30,7 +28,6 @@ func InitDB() (*sql.DB, error) {
 	}
 
 	if install {
-		// Create table if it doesn't exist
 		tableQuery := `CREATE TABLE IF NOT EXISTS scheduler (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			date TEXT NOT NULL,
@@ -44,7 +41,6 @@ func InitDB() (*sql.DB, error) {
 			log.Fatalf("Failed to create table: %v", err)
 		}
 
-		// Create index on date column
 		indexQuery := `CREATE INDEX IF NOT EXISTS idx_date ON scheduler (date);`
 		if _, err := db.Exec(indexQuery); err != nil {
 			log.Fatalf("Failed to create index: %v", err)
