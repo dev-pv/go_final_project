@@ -82,7 +82,7 @@ func AddTask(task *Task, db *sql.DB) (string, error) {
 		if task.Repeat != "" {
 			nextDate, err := NextDate(now, task.Date, task.Repeat)
 			if err != nil {
-				return "", fmt.Errorf("invalid repeat rule: %v", err)
+				return "", fmt.Errorf("invalid repeat rule: %w", err)
 			}
 			task.Date = nextDate
 		} else {
@@ -107,7 +107,7 @@ func AddTask(task *Task, db *sql.DB) (string, error) {
 	var exists bool
 	checkQuery := `SELECT EXISTS(SELECT 1 FROM scheduler WHERE date = ? AND title = ?)`
 	if err := db.QueryRow(checkQuery, task.Date, task.Title).Scan(&exists); err != nil {
-		return "", fmt.Errorf("failed to check existing task: %v", err)
+		return "", fmt.Errorf("failed to check existing task: %w", err)
 	}
 	if exists {
 		return "", errors.New("task with the same date and title already exists")
@@ -116,12 +116,12 @@ func AddTask(task *Task, db *sql.DB) (string, error) {
 	query := `INSERT INTO scheduler (date, title, comment, repeat) VALUES (?, ?, ?, ?)`
 	res, err := db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat)
 	if err != nil {
-		return "", fmt.Errorf("failed to save task: %v", err)
+		return "", fmt.Errorf("failed to save task: %w", err)
 	}
 
 	id, err := res.LastInsertId()
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve task ID: %v", err)
+		return "", fmt.Errorf("failed to retrieve task ID: %w", err)
 	}
 
 	return fmt.Sprintf("%d", id), nil
@@ -132,7 +132,7 @@ func GetTasks(db *sql.DB) ([]Task, error) {
 
 	rows, err := db.Query(`SELECT id, date, title, comment, repeat FROM scheduler ORDER BY date LIMIT 50`)
 	if err != nil {
-		return nil, fmt.Errorf("failed to select tasks: %v", err)
+		return nil, fmt.Errorf("failed to select tasks: %w", err)
 	}
 	defer rows.Close()
 
@@ -142,10 +142,14 @@ func GetTasks(db *sql.DB) ([]Task, error) {
 			id64 int64
 		)
 		if err := rows.Scan(&id64, &t.Date, &t.Title, &t.Comment, &t.Repeat); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %v", err)
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		t.ID = strconv.FormatInt(id64, 10)
 		tasks = append(tasks, t)
+
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("rows iteration error: %w", err)
+		}
 	}
 
 	return tasks, nil
@@ -172,7 +176,7 @@ func GetTaskByID(db *sql.DB, id string) (*Task, error) {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("task not found")
 		}
-		return nil, fmt.Errorf("failed to query task: %v", err)
+		return nil, fmt.Errorf("failed to query task: %w", err)
 	}
 
 	t.ID = strconv.FormatInt(id64, 10)
@@ -207,7 +211,7 @@ func EditTask(task *Task, db *sql.DB) error {
 		if task.Repeat != "" {
 			nextDate, err := NextDate(now, task.Date, task.Repeat)
 			if err != nil {
-				return fmt.Errorf("invalid repeat rule: %v", err)
+				return fmt.Errorf("invalid repeat rule: %w", err)
 			}
 			task.Date = nextDate
 		} else {
@@ -234,12 +238,12 @@ func EditTask(task *Task, db *sql.DB) error {
               WHERE id = ?`
 	res, err := db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat, idInt)
 	if err != nil {
-		return fmt.Errorf("failed to update task: %v", err)
+		return fmt.Errorf("failed to update task: %w", err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("rowsAffected error: %v", err)
+		return fmt.Errorf("rowsAffected error: %w", err)
 	}
 	if rowsAffected == 0 {
 		return errors.New("task not found")
@@ -296,7 +300,7 @@ func DeleteTask(db *sql.DB, id string) error {
 func updateTaskDate(db *sql.DB, id string, newDate string) error {
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
-		return fmt.Errorf("invalid task id '%s'", id)
+		return fmt.Errorf("invalid task id '%s': %w", id, err)
 	}
 
 	res, err := db.Exec(`UPDATE scheduler SET date=? WHERE id=?`, newDate, idInt)

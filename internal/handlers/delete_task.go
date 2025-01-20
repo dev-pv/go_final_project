@@ -14,13 +14,15 @@ func DeleteTaskHandler(db *sql.DB) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 		if r.Method != http.MethodDelete {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Method not allowed"})
 			return
 		}
 
 		id := r.URL.Query().Get("id")
 		if err := app.DeleteTask(db, id); err != nil {
 			log.Printf("DeleteTask error: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}

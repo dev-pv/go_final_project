@@ -47,6 +47,7 @@ func main() {
 	http.HandleFunc("/api/tasks", handlers.GetTasksHandler(database))
 	http.HandleFunc("/api/task/done", handlers.DoneTaskHandler(database))
 
+	log.Printf("Starting server on port %s...", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
